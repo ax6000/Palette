@@ -17,7 +17,7 @@ def is_image_file(filename):
 
 def make_dataset(dir):
     if os.path.isfile(dir):
-        images = [i for i in np.genfromtxt(dir, dtype=np.str, encoding='utf-8')]
+        images = [i for i in np.genfromtxt(dir, dtype=str, encoding='utf-8')]
     else:
         images = []
         assert os.path.isdir(dir), '%s is not a valid directory' % dir
@@ -31,6 +31,9 @@ def make_dataset(dir):
 
 def pil_loader(path):
     return Image.open(path).convert('RGB')
+
+def pil_loader_gray(path):
+    return Image.open(path).convert('L')
 
 class InpaintDataset(data.Dataset):
     def __init__(self, data_root, mask_config={}, data_len=-1, image_size=[256, 256], loader=pil_loader):
@@ -161,7 +164,7 @@ class ColorizationDataset(data.Dataset):
     def __getitem__(self, index):
         ret = {}
         file_name = str(self.flist[index]).zfill(5) + '.png'
-
+        
         img = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, 'color', file_name)))
         cond_image = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, 'gray', file_name)))
 
@@ -173,4 +176,91 @@ class ColorizationDataset(data.Dataset):
     def __len__(self):
         return len(self.flist)
 
+class I2IDataset(data.Dataset):
+    def __init__(self, data_root, data_flist, data_len=-1, image_size=[224, 224], loader=pil_loader_gray):
+        self.data_root = data_root
+        flist = make_dataset(data_flist)
+        if data_len > 0:
+            self.flist = flist[:int(data_len)]
+        else:
+            self.flist = flist
+        self.tfs = transforms.ToTensor()
+        self.loader = loader
+        self.image_size = image_size
 
+    def __getitem__(self, index):
+        ret = {}
+        file_name = str(self.flist[index])+ '.png'
+        # print(self.tfs(self.loader('{}/{}/{}'.format(self.data_root, 'abp\\p00', file_name))).shape)
+        img = self.tfs(self.loader('{}\\{}\\{}'.format(self.data_root, 'abp\\p00', file_name)))
+        cond_image = self.tfs(self.loader('{}\\{}\\{}'.format(self.data_root, 'ppg\\p00', file_name)))
+
+        ret['gt_image'] = img
+        ret['cond_image'] = cond_image
+        ret['path'] = file_name
+        return ret
+
+    def __len__(self):
+        return len(self.flist)
+    
+class PPG2ABPDataset(data.Dataset):
+    def __init__(self, data_root, data_flist, data_len=-1, image_size=[224, 224], loader=None):
+        self.data_root = data_root
+        flist = make_dataset(data_flist)
+        if data_len > 0:
+            self.flist = flist[:int(data_len)]
+        else:
+            self.flist = flist
+        self.tfs = transforms.ToTensor()
+        self.image_size = image_size
+
+    def __getitem__(self, index):
+        ret = {}
+        file_name = str(self.flist[index]) + '.npy'
+
+        npy = np.load('{}\\{}'.format(self.data_root, file_name))
+        # cond_image = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, 'cond', file_name)))
+
+        ret['gt_image'] = npy[:,0].reshape(1,-1)
+        ret['cond_image'] = npy[:,1].reshape(1,-1)
+        ret['path'] = file_name
+        return ret
+
+    def __len__(self):
+        return len(self.flist)
+    
+class PPG2ABPDataset_v2(data.Dataset):
+    def __init__(self, data_root, data_flist, data_len=-1, image_size=[224, 224], loader=None):
+        self.data_root = data_root
+        flist = make_dataset(data_flist)
+        if data_len > 0:
+            self.flist = flist[:int(data_len)]
+        else:
+            self.flist = flist
+        self.tfs = transforms.ToTensor()
+        self.image_size = image_size
+        self.data=self.load_npys()
+    def load_npys(self):
+        data = []
+        for f in self.flist:
+            arr = np.load(self.data_root+"\\"+str(f))
+            if len(arr) != 0:
+                data.append(arr)
+        data = np.concatenate(data,dtype=np.float16)
+        print("data prepared:" ,data.shape)
+        return data
+    
+    def __getitem__(self, index):
+        ret = {}
+        # file_name = str(self.flist[index]) + '.npy'
+
+        # npy = np.load('{}\\{}'.format(self.data_root, file_name))
+        # cond_image = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, 'cond', file_name)))
+
+        ret['gt_image'] = self.data[index,:,0].reshape(1,-1)
+        ret['cond_image'] = self.data[index,:,1].reshape(1,-1)
+        ret['path'] = str(index)
+        return ret
+
+    def __len__(self):
+        return self.data.shape[0]

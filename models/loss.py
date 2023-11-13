@@ -12,6 +12,8 @@ from torch.autograd import Variable
 
 
 def mse_loss(output, target):
+    # print("mse_loss",F.mse_loss(output, target),output.shape,target.shape)
+    # return F.mse_loss(output.view(-1,1), target.view(-1,1))
     return F.mse_loss(output, target)
 
     
@@ -30,7 +32,7 @@ class FocalLoss(nn.Module):
             input = input.transpose(1,2)    # N,C,H*W => N,H*W,C
             input = input.contiguous().view(-1,input.size(2))   # N,H*W,C => N*H*W,C
         target = target.view(-1,1)
-
+        # print("loss:33",input.shape)
         logpt = F.log_softmax(input)
         logpt = logpt.gather(1,target)
         logpt = logpt.view(-1)

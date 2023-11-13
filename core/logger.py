@@ -4,7 +4,8 @@ import importlib
 from datetime import datetime
 import logging
 import pandas as pd
-
+import numpy as np
+import matplotlib.pyplot as plt
 import core.util as Util
 
 class InfoLogger():
@@ -87,7 +88,7 @@ class VisualWriter():
 
         self.tb_writer_ftns = {
             'add_scalar', 'add_scalars', 'add_image', 'add_images', 'add_audio',
-            'add_text', 'add_histogram', 'add_pr_curve', 'add_embedding'
+            'add_text', 'add_histogram', 'add_pr_curve', 'add_embedding','add_figure'
         }
         self.tag_mode_exceptions = {'add_histogram', 'add_embedding'}
         self.custom_ftns = {'close'}
@@ -108,8 +109,15 @@ class VisualWriter():
         try:
             names = results['name']
             outputs = Util.postprocess(results['result'])
-            for i in range(len(names)): 
-                Image.fromarray(outputs[i]).save(os.path.join(result_path, names[i]))
+            for i in range(len(names)):
+                dirname = os.makedirs(os.path.dirname(os.path.join(result_path, names[i])),exist_ok=True)
+                if len(outputs[i]) == 1:
+                    plt.figure()
+                    plt.plot(np.arange(len(outputs[i]),outputs[i]))
+                    plt.savefig(os.path.join(result_path, names[i])[:-4]+".png")
+                    plt.close()
+                else: 
+                    Image.fromarray(outputs[i]).save(os.path.join(result_path, names[i])[:-4]+".png")
         except:
             raise NotImplementedError('You must specify the context of name and result in save_current_results functions of model.')
 
@@ -132,6 +140,7 @@ class VisualWriter():
                     # add phase(train/valid) tag
                     if name not in self.tag_mode_exceptions:
                         tag = '{}/{}'.format(self.phase, tag)
+                    # print(tag,data,self.iter,args,kwargs)
                     add_data(tag, data, self.iter, *args, **kwargs)
             return wrapper
         else:

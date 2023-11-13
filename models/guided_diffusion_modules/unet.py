@@ -181,6 +181,7 @@ class ResBlock(EmbedBlock):
         )
 
     def _forward(self, x, emb):
+        # print("params",self.updown,self.use_scale_shift_norm,x.shape,emb.shape)
         if self.updown:
             in_rest, in_conv = self.in_layers[:-1], self.in_layers[-1]
             h = in_rest(x)
@@ -189,9 +190,11 @@ class ResBlock(EmbedBlock):
             h = in_conv(h)
         else:
             h = self.in_layers(x)
+        # print(h.shape)
         emb_out = self.emb_layers(emb).type(h.dtype)
         while len(emb_out.shape) < len(h.shape):
             emb_out = emb_out[..., None]
+        # print(h.shape)
         if self.use_scale_shift_norm:
             out_norm, out_rest = self.out_layers[0], self.out_layers[1:]
             scale, shift = torch.chunk(emb_out, 2, dim=1)
@@ -200,6 +203,7 @@ class ResBlock(EmbedBlock):
         else:
             h = h + emb_out
             h = self.out_layers(h)
+        # print("x",x.shape,"res(x)",self.skip_connection(x).shape,"h",h.shape)
         return self.skip_connection(x) + h
 
 class AttentionBlock(nn.Module):
@@ -242,11 +246,13 @@ class AttentionBlock(nn.Module):
         return checkpoint(self._forward, (x,), self.parameters(), True)
 
     def _forward(self, x):
+        print("qkva",x.shape)
         b, c, *spatial = x.shape
         x = x.reshape(b, c, -1)
         qkv = self.qkv(self.norm(x))
         h = self.attention(qkv)
         h = self.proj_out(h)
+        print(h.shape,x.shape,qkv.shape)
         return (x + h).reshape(b, c, *spatial)
 
 
@@ -529,6 +535,8 @@ class UNet(nn.Module):
         :param gammas: a 1-D batch of gammas.
         :return: an [N x C x ...] Tensor of outputs.
         """
+        # print("a",x.shape)
+        # print("g",gammas.shape)
         hs = []
         gammas = gammas.view(-1, )
         emb = self.cond_embed(gamma_embedding(gammas, self.inner_channel))
