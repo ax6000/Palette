@@ -4,6 +4,8 @@ from core.base_model import BaseModel
 from core.logger import LogTracker
 import copy
 import matplotlib.pyplot as plt
+import torch.nn as nn
+import numpy as np
 class EMA():
     def __init__(self, beta=0.9999):
         super().__init__()
@@ -37,7 +39,7 @@ class Palette(BaseModel):
         if self.ema_scheduler is not None:
             self.netG_EMA = self.set_device(self.netG_EMA, distributed=self.opt['distributed'])
         self.load_networks()
-
+        
         self.optG = torch.optim.Adam(list(filter(lambda p: p.requires_grad, self.netG.parameters())), **optimizers[0])
         self.optimizers.append(self.optG)
         self.resume_training() 
@@ -56,7 +58,7 @@ class Palette(BaseModel):
 
         self.sample_num = sample_num
         self.task = task
-        
+        self.scaler = torch.cuda.amp.GradScaler(self.opt['grad_scale'])
     def set_input(self, data):
         ''' must use set_device in tensor '''
         self.cond_image = self.set_device(data.get('cond_image'))
@@ -65,6 +67,7 @@ class Palette(BaseModel):
         self.mask_image = data.get('mask_image')
         self.path = data['path']
         self.batch_size = len(data['path'])
+        # print("#####batch_size ###########",self.batch_size)
     
     def get_current_visuals(self, phase='train'):
         dict = {
@@ -73,15 +76,15 @@ class Palette(BaseModel):
         }
         if self.task in ['inpainting','uncropping']:
             dict.update({
-                'gt_image': (self.gt_image.detach()[:].float().cpu()+1)/2,
-                'cond_image': (self.cond_image.detach()[:].float().cpu()+1)/2,
+                 'gt_image': (self.gt_image.detach()[:].float().cpu()+1)/2,
+            'cond_image': (self.cond_image.detach()[:].float().cpu()+1)/2,
                 'mask': self.mask.detach()[:].float().cpu(),
                 'mask_image': (self.mask_image+1)/2,
             })
         if phase != 'train':
             dict.update({
-                'gt_image': (self.gt_image.detach()[:].float().cpu()+1)/2,
-                'cond_image': (self.cond_image.detach()[:].float().cpu()+1)/2,
+                 'gt_image': (self.gt_image.detach()[:].float().cpu()+1)/2,
+            'cond_image': (self.cond_image.detach()[:].float().cpu()+1)/2,
                 'output': (self.output.detach()[:].float().cpu()+1)/2
             })
         return dict
@@ -106,16 +109,29 @@ class Palette(BaseModel):
         self.results_dict = self.results_dict._replace(name=ret_path, result=ret_result)
         return self.results_dict._asdict()
 
+    def bfs_grad_fn(self,grad_fn):
+        if grad_fn is None:
+            return
+        print(grad_fn,grad_fn.next_functions)
+        for input_tensor in grad_fn.next_functions:
+            self.bfs_grad_fn(input_tensor[0])
     def train_step(self):
         self.netG.train()
-        self.train_metrics.reset()
+        self.train_metrics.reset() 
         for train_data in tqdm.tqdm(self.phase_loader):
             self.set_input(train_data)
             self.optG.zero_grad()
-            loss = self.netG(self.gt_image, self.cond_image, mask=self.mask)
-            loss.backward()
-            self.optG.step()
-
+            with torch.autocast(device_type="cuda",dtype=torch.float16): 
+                loss = self.netG(self.gt_image, self.cond_image, mask=self.mask)
+                self.scaler.scale(loss).backward()
+                # self.scaler.unscale_(self.optG)
+                # nn.utils.clip_grad_norm(self.netG.parameters(),10)
+                self.scaler.step(self.optG)
+                self.scaler.update()
+            # from torchviz import make_dot
+            # img = make_dot(loss, params=dict(self.netG.named_parameters()))
+            # img.format = "png"
+            # img.render("NeuralNet_v2")
             self.iter += self.batch_size
             self.writer.set_iter(self.epoch, self.iter, phase='train')
             self.train_metrics.update(self.loss_fn.__name__, loss.item())
@@ -140,29 +156,29 @@ class Palette(BaseModel):
         figs = []
         for i in range(value.shape[0]):
             y = value[i].squeeze()
-            fig, ax  = plt.subplots()
-            ax.plot(y)
+            fig = plt.figure()
+            plt.plot(y)
             figs.append(fig)
         return figs
-    
     def val_step(self):
         self.netG.eval()
         self.val_metrics.reset()
         with torch.no_grad():
             for val_data in tqdm.tqdm(self.val_loader):
                 self.set_input(val_data)
-                if self.opt['distributed']:
-                    if self.task in ['inpainting','uncropping']:
-                        self.output, self.visuals = self.netG.module.restoration(self.cond_image, y_t=self.cond_image, 
-                            y_0=self.gt_image, mask=self.mask, sample_num=self.sample_num)
+                with torch.autocast(device_type="cuda",dtype=torch.float16): 
+                    if self.opt['distributed']:
+                        if self.task in ['inpainting','uncropping']:
+                            self.output, self.visuals = self.netG.module.restoration(self.cond_image, y_t=self.cond_image, 
+                                y_0=self.gt_image, mask=self.mask, sample_num=self.sample_num)
+                        else:
+                            self.output, self.visuals = self.netG.module.restoration(self.cond_image, sample_num=self.sample_num)
                     else:
-                        self.output, self.visuals = self.netG.module.restoration(self.cond_image, sample_num=self.sample_num)
-                else:
-                    if self.task in ['inpainting','uncropping']:
-                        self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.cond_image, 
-                            y_0=self.gt_image, mask=self.mask, sample_num=self.sample_num)
-                    else:
-                        self.output, self.visuals = self.netG.restoration(self.cond_image, sample_num=self.sample_num)
+                        if self.task in ['inpainting','uncropping']:
+                            self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.cond_image, 
+                                y_0=self.gt_image, mask=self.mask, sample_num=self.sample_num)
+                        else:
+                            self.output, self.visuals = self.netG.restoration(self.cond_image, sample_num=self.sample_num)
                     
                 self.iter += self.batch_size
                 self.writer.set_iter(self.epoch, self.iter, phase='val')
@@ -173,8 +189,8 @@ class Palette(BaseModel):
                     self.val_metrics.update(key, value)
                     self.writer.add_scalar(key, value)
                 for key, value in self.get_current_visuals(phase='val').items():
-                    sif len(value.shape) == 3:
-                        self.writer.add_figure(key,self.make_figures(value))
+                    if len(value.shape) == 3:
+                        self.writer.add_figure(key,self.make_figures(value),close=True)
                     else:
                         self.writer.add_images(key, value)
                 self.writer.save_images(self.save_current_results())

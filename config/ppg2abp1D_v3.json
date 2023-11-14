@@ -19,8 +19,8 @@
             "which_dataset": {  // import designated dataset using arguments 
                 "name": ["data.dataset", "PPG2ABPDataset_v2"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
                 "args":{ // arguments to initialize dataset
-                    "data_root": "D:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1107_concat\\p00",
-                    "data_flist": "D:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\train_p00.txt",
+                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1107_concat\\p00",
+                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\train_p00.txt",
                     "data_len": -1
                 } 
             },
@@ -46,8 +46,8 @@
             "which_dataset": {
                 "name": "PPG2ABPDataset_v2", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "D:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1107_concat\\p00",
-                    "data_flist": "D:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\test_p00.txt"
+                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1107_concat\\p00",
+                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\test_p00.txt"
                 }
             },
             "dataloader":{
@@ -62,7 +62,7 @@
 
     "model": { // networks/metrics/losses/optimizers/lr_schedulers is a list and model is a dict
         "which_model": { // import designated  model(trainer) using arguments 
-            "name": ["models.model", "Palette"], // import Model() class / function(not recommend) from models.model.py (default is [models.model.py])
+            "name": ["models.model_v3", "Palette"], // import Model() class / function(not recommend) from models.model.py (default is [models.model.py])
             "args": {
                 "sample_num": 8, // process of each image
                 "task": "i2i",

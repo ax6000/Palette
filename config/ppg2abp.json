@@ -19,8 +19,8 @@
             "which_dataset": {  // import designated dataset using arguments 
                 "name": ["data.dataset", "I2IDataset"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
                 "args":{ // arguments to initialize dataset
-                    "data_root": "D:\\minowa\\BloodPressureEstimation\\data\\processed\\img\\1030",
-                    "data_flist": "D:\\minowa\\BloodPressureEstimation\\data\\processed\\img\\1030\\train.flist",
+                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\img\\1030",
+                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\img\\1030\\train.flist",
                     "data_len": -1
                 } 
             },
@@ -46,8 +46,8 @@
             "which_dataset": {
                 "name": "I2IDataset", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "D:\\minowa\\BloodPressureEstimation\\data\\processed\\img\\1030",
-                    "data_flist": "D:\\minowa\\BloodPressureEstimation\\data\\processed\\img\\1030\\test.flist"
+                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\img\\1030",
+                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\img\\1030\\test.flist"
                 }
             },
             "dataloader":{

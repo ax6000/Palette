@@ -19,8 +19,8 @@
             "which_dataset": {  // import designated dataset using arguments 
                 "name": ["data.dataset", "PPG2ABPDataset"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
                 "args":{ // arguments to initialize dataset
-                    "data_root": "D:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1101_norm\\p00",
-                    "data_flist": "D:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1101_norm\\train.flist",
+                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1101_norm\\p00",
+                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1101_norm\\train.flist",
                     "data_len": -1
                 } 
             },
@@ -46,8 +46,8 @@
             "which_dataset": {
                 "name": "PPG2ABPDataset", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "D:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1101_norm\\p00",
-                    "data_flist": "D:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1101_norm\\train.flist"
+                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1101_norm\\p00",
+                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1101_norm\\train.flist"
                 }
             },
             "dataloader":{
