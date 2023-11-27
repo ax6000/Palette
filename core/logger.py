@@ -109,16 +109,12 @@ class VisualWriter():
         try:
             names = results['name']
             outputs = Util.postprocess(results['result'])
-            for i in range(len(names)):
-                dirname = os.makedirs(os.path.dirname(os.path.join(result_path, names[i])),exist_ok=True)
-                if len(outputs[i]) == 1:
-                    plt.figure()
-                    plt.plot(np.arange(len(outputs[i]),outputs[i]))
-                    plt.savefig(os.path.join(result_path, names[i])[:-4]+".png")
-                    plt.close()
-                else: 
-                    Image.fromarray(outputs[i]).save(os.path.join(result_path, names[i])[:-4]+".png")
-        except:
+            for i in range(3):
+                # dirname = os.makedirs(os.path.dirname(os.path.join(result_path, names[i])),exist_ok=True)
+                np.save(os.path.join(result_path,f"{names[i]}.npy"),np.stack(outputs[i::3]))
+                # np.save(os.path.join(result_path,str(self.epoch)+'e.npy'),outputs[0]-outputs[2])
+        except Exception as e:
+            print(e)
             raise NotImplementedError('You must specify the context of name and result in save_current_results functions of model.')
 
     def close(self):

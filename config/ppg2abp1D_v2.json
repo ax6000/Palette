@@ -11,7 +11,8 @@
         "results": "results",
         "checkpoint": "checkpoint",
         // "resume_state": "experiments/inpainting_places2_220413_143231/checkpoint/25" 
-        "resume_state": null // ex: 100, loading .state  and .pth from given epoch and iteration
+        // "resume_state": null // ex: 100, loading .state  and .pth from given epoch and iteration
+        "resume_state": "experiments/train_complete_1/checkpoint/8"// ex: 100, loading .state  and .pth from given epoch and iteration
     },
 
     "datasets": { // train or test
@@ -19,13 +20,13 @@
             "which_dataset": {  // import designated dataset using arguments 
                 "name": ["data.dataset", "PPG2ABPDataset_v2"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
                 "args":{ // arguments to initialize dataset
-                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1107_concat\\p00",
+                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1120\\p00",
                     "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\train_p00.txt",
                     "data_len": -1
                 } 
             },
             "dataloader":{
-                "validation_split": 25, // percent or number 
+                "validation_split": 64, // percent or number 
                 "args":{ // arguments to initialize train_dataloader
                     "batch_size": 64, // batch size in each gpu
                     "num_workers": 4,
@@ -34,7 +35,7 @@
                     "drop_last": true
                 },
                 "val_args":{ // arguments to initialize valid_dataloader, will overwrite the parameters in train_dataloader
-                    "batch_size": 25, // batch size in each gpu
+                    "batch_size": 64, // batch size in each gpu
                     "num_workers": 4,
                     "shuffle": false,
                     "pin_memory": true,
@@ -47,13 +48,14 @@
                 "name": "PPG2ABPDataset_v2", // import Dataset() class / function(not recommend) from default file
                 "args":{
                     "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1107_concat\\p00",
-                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\test_p00.txt"
+                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\test_p00.txt",
+                    "data_len":5e4
                 }
             },
             "dataloader":{
                 "args":{
-                    "batch_size": 16,
-                    "num_workers": 4,
+                    "batch_size": 256,
+                    "num_workers": 8,
                     "pin_memory": true
                 }
             }
@@ -112,9 +114,9 @@
                         },
                         "test": {
                             "schedule": "linear",
-                            "n_timestep": 1000,
-                            "linear_start": 1e-4,
-                            "linear_end": 0.09
+                            "n_timestep": 100,
+                            "linear_start": 2e-5,
+                            "linear_end": 0.2
                         }
                     }
                 }
@@ -132,7 +134,7 @@
         "n_epoch": 100, // max epochs, not limited now
         "n_iter": 2e8, // max interations
         "val_epoch": 1, // valdation every specified number of epochs
-        "save_checkpoint_epoch": 2,
+        "save_checkpoint_epoch": 1,
         "log_iter": 1e4, // log every specified number of iterations
         "tensorboard" : true // tensorboardX enable
     },

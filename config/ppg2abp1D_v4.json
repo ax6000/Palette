@@ -1,9 +1,9 @@
 {
-    "name": "ppg2abp_1Dp00_v3", // experiments name
+    "name": "ppg2abp_1Dp00_v4", // experiments name
     "gpu_ids": [0], // gpu ids list, default is single 0
     "seed" : -1, // random seed, seed <0 represents randomization not used 
     "finetune_norm": false, // find the parameters to optimize
-    "grad_scale": 2048,
+    "grad_scale": 4096,
     "path": { //set every part file path
         "base_dir": "experiments", // base path for all log except resume_state
         "code": "code", // code backup
@@ -12,7 +12,7 @@
         "checkpoint": "checkpoint",
         // "resume_state": "experiments/inpainting_places2_220413_143231/checkpoint/25" 
         // "resume_state": null // ex: 100, loading .state  and .pth from given epoch and iteration
-        "resume_state": "experiments/train_complete_3/checkpoint/6"
+        "resume_state": "experiments/train_complete_2/checkpoint/4"// ex: 100, loading .state  and .pth from given epoch and iteration
     },
 
     "datasets": { // train or test
@@ -20,13 +20,13 @@
             "which_dataset": {  // import designated dataset using arguments 
                 "name": ["data.dataset", "PPG2ABPDataset_v2"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
                 "args":{ // arguments to initialize dataset
-                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1107_concat\\p00",
-                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\train_p00.txt",
+                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1120_fp16\\p00",
+                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\train_p00_v4.txt",
                     "data_len": -1
                 } 
             },
             "dataloader":{
-                "validation_split": 64, // percent or number 
+                "validation_split": 20, // percent or number 
                 "args":{ // arguments to initialize train_dataloader
                     "batch_size": 64, // batch size in each gpu
                     "num_workers": 4,
@@ -35,7 +35,7 @@
                     "drop_last": true
                 },
                 "val_args":{ // arguments to initialize valid_dataloader, will overwrite the parameters in train_dataloader
-                    "batch_size": 256, // batch size in each gpu
+                    "batch_size": 64, // batch size in each gpu
                     "num_workers": 4,
                     "shuffle": false,
                     "pin_memory": true,
@@ -47,9 +47,9 @@
             "which_dataset": {
                 "name": "PPG2ABPDataset_v2", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1107_concat\\p00",
-                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\test_p00.txt",
-                    "data_len":1e4
+                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\sig_npy\\1120_fp16\\p00",
+                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\test_p00_v4.txt",
+                    "data_len":5e4
                 }
             },
             "dataloader":{
@@ -64,7 +64,7 @@
 
     "model": { // networks/metrics/losses/optimizers/lr_schedulers is a list and model is a dict
         "which_model": { // import designated  model(trainer) using arguments 
-            "name": ["models.model_v3", "Palette"], // import Model() class / function(not recommend) from models.model.py (default is [models.model.py])
+            "name": ["models.model_v2", "Palette"], // import Model() class / function(not recommend) from models.model.py (default is [models.model.py])
             "args": {
                 "sample_num": 8, // process of each image
                 "task": "i2i",
@@ -114,16 +114,16 @@
                         },
                         "test": {
                             "schedule": "linear",
-                            "n_timestep": 200,
+                            "n_timestep": 100,
                             "linear_start": 2e-5,
-                            "linear_end": 0.02
+                            "linear_end": 0.2
                         }
                     }
                 }
             }
         ],
         "which_losses": [ // import designated list of losses without arguments
-            "mse_loss"// import mse_loss() function/class from default file (default is [models/losses.py]), equivalent to { "name": "mse_loss", "args":{}}
+            "mse_loss" // import mse_loss() function/class from default file (default is [models/losses.py]), equivalent to { "name": "mse_loss", "args":{}}
         ],
         "which_metrics": [ // import designated list of metrics without arguments
             "mae" // import mae() function/class from default file (default is [models/metrics.py]), equivalent to { "name": "mae", "args":{}}

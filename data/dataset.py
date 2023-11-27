@@ -232,14 +232,22 @@ class PPG2ABPDataset(data.Dataset):
 class PPG2ABPDataset_v2(data.Dataset):
     def __init__(self, data_root, data_flist, data_len=-1, image_size=[224, 224], loader=None):
         self.data_root = data_root
-        flist = make_dataset(data_flist)
-        if data_len > 0:
-            self.flist = flist[:int(data_len)]
-        else:
-            self.flist = flist
+        self.flist = make_dataset(data_flist)
+        # if data_len > 0:
+        #     self.flist = flist[:int(data_len)]
+        # else:
+        #     self.flist = flist
         self.tfs = transforms.ToTensor()
         self.image_size = image_size
         self.data=self.load_npys()
+        print(self.data.shape,len(self.data))
+        if data_len > 0:
+            data_index = np.arange(0,len(self.data),max(len(self.data)//int(data_len),1)).astype(int)
+            self.data = self.data[data_index]
+            # self.data = self.data[:int(data_len)]
+        else:
+            self.data = self.data[:len(self.data)-len(self.data)%64]
+        print("data prepared:" ,self.data.shape)
     def load_npys(self):
         data = []
         for f in self.flist:
@@ -247,7 +255,49 @@ class PPG2ABPDataset_v2(data.Dataset):
             if len(arr) != 0:
                 data.append(arr)
         data = np.concatenate(data,dtype=np.float16)
-        print("data prepared:" ,data.shape)
+        return data
+    
+    def __getitem__(self, index):
+        ret = {}
+        # file_name = str(self.flist[index]) + '.npy'
+
+        # npy = np.load('{}\\{}'.format(self.data_root, file_name))
+        # cond_image = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, 'cond', file_name)))
+
+        ret['gt_image'] = self.data[index,:,0].reshape(1,-1).astype(np.float32)
+        ret['cond_image'] = self.data[index,:,1].reshape(1,-1).astype(np.float32)
+        ret['path'] = str(index)
+        return ret
+
+    def __len__(self):
+        return self.data.shape[0]
+    
+
+class PPG2ABPDataset_v4(data.Dataset):
+    def __init__(self, data_root, data_flist, data_len=-1, image_size=[224, 224], loader=None):
+        self.data_root = data_root
+        self.flist = make_dataset(data_flist)
+        # if data_len > 0:
+        #     self.flist = flist[:int(data_len)]
+        # else:
+        #     self.flist = flist
+        self.tfs = transforms.ToTensor()
+        self.image_size = image_size
+        self.data=self.load_npys()
+        if data_len > 0:
+            # data_index = np.arange(0,len(self.data),max(len(self.data)//int(data_len),1)).astype(int)
+            # self.data = self.data[data_index]
+            self.data = self.data[:int(data_len)]
+        else:
+            pass
+        print("data prepared:" ,self.data.shape)
+    def load_npys(self):
+        data = []
+        for f in self.flist:
+            arr = np.load(self.data_root+"\\"+str(f))
+            if len(arr) != 0:
+                data.append(arr)
+        data = np.concatenate(data,dtype=np.float32)
         return data
     
     def __getitem__(self, index):

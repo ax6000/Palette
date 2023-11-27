@@ -4,6 +4,8 @@ from core.base_model import BaseModel
 from core.logger import LogTracker
 import copy
 import matplotlib.pyplot as plt
+from torchinfo import summary
+
 class EMA():
     def __init__(self, beta=0.9999):
         super().__init__()
@@ -112,7 +114,7 @@ class Palette(BaseModel):
         for train_data in tqdm.tqdm(self.phase_loader):
             self.set_input(train_data)
             self.optG.zero_grad()
-            loss = self.netG(self.gt_image, self.cond_image, mask=self.mask)
+            loss = summary(self.netG,[self.gt_image, self.cond_image])
             loss.backward()
             self.optG.step()
 
@@ -173,7 +175,7 @@ class Palette(BaseModel):
                     self.val_metrics.update(key, value)
                     self.writer.add_scalar(key, value)
                 for key, value in self.get_current_visuals(phase='val').items():
-                    sif len(value.shape) == 3:
+                    if len(value.shape) == 3:
                         self.writer.add_figure(key,self.make_figures(value))
                     else:
                         self.writer.add_images(key, value)

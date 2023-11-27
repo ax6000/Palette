@@ -48,7 +48,14 @@ def define_dataset(logger, opt):
             data_len = debug_split
         else:
             data_len *= debug_split
-
+            
+    if opt['phase'] == "test":
+        debug_split = opt['datasets']['test'].get('test_split', 1.0)
+        if isinstance(debug_split, int):
+            data_len = debug_split
+        else:
+            data_len *= debug_split
+    
     dataloder_opt = opt['datasets'][opt['phase']]['dataloader']
     valid_split = dataloder_opt.get('validation_split', 0)    
     

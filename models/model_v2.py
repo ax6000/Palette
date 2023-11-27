@@ -100,7 +100,7 @@ class Palette(BaseModel):
             ret_result.append(self.visuals[idx::self.batch_size].detach().float().cpu())
             
             ret_path.append('Out_{}'.format(self.path[idx]))
-            ret_result.append(self.visuals[idx-self.batch_size].detach().float().cpu())
+            ret_result.append(self.output[idx-self.batch_size].detach().float().cpu())
         
         if self.task in ['inpainting','uncropping']:
             ret_path.extend(['Mask_{}'.format(name) for name in self.path])
@@ -123,11 +123,11 @@ class Palette(BaseModel):
             self.optG.zero_grad()
             with torch.autocast(device_type="cuda",dtype=torch.float16): 
                 loss = self.netG(self.gt_image, self.cond_image, mask=self.mask)
-                self.scaler.scale(loss).backward()
-                # self.scaler.unscale_(self.optG)
-                # nn.utils.clip_grad_norm(self.netG.parameters(),10)
-                self.scaler.step(self.optG)
-                self.scaler.update()
+            self.scaler.scale(loss).backward()
+            # self.scaler.unscale_(self.optG)
+            # nn.utils.clip_grad_norm(self.netG.parameters(),10)
+            self.scaler.step(self.optG)
+            self.scaler.update()
             # from torchviz import make_dot
             # img = make_dot(loss, params=dict(self.netG.named_parameters()))
             # img.format = "png"
@@ -152,8 +152,12 @@ class Palette(BaseModel):
         for scheduler in self.schedulers:
             scheduler.step()
         return self.train_metrics.result()
-    def make_figures(self,value):
+    def make_figures(self,value,single=False):
         figs = []
+        if single:
+            fig = plt.figure()
+            plt.plot(value[-1].squeeze())
+            return [fig]
         for i in range(value.shape[0]):
             y = value[i].squeeze()
             fig = plt.figure()
@@ -203,19 +207,20 @@ class Palette(BaseModel):
         with torch.no_grad():
             for phase_data in tqdm.tqdm(self.phase_loader):
                 self.set_input(phase_data)
-                if self.opt['distributed']:
-                    if self.task in ['inpainting','uncropping']:
-                        self.output, self.visuals = self.netG.module.restoration(self.cond_image, y_t=self.cond_image, 
-                            y_0=self.gt_image, mask=self.mask, sample_num=self.sample_num)
+                with torch.autocast(device_type="cuda",dtype=torch.float16): 
+                    if self.opt['distributed']:
+                        if self.task in ['inpainting','uncropping']:
+                            self.output, self.visuals = self.netG.module.restoration(self.cond_image, y_t=self.cond_image, 
+                                y_0=self.gt_image, mask=self.mask, sample_num=self.sample_num)
+                        else:
+                            self.output, self.visuals = self.netG.module.restoration(self.cond_image, sample_num=self.sample_num)
                     else:
-                        self.output, self.visuals = self.netG.module.restoration(self.cond_image, sample_num=self.sample_num)
-                else:
-                    if self.task in ['inpainting','uncropping']:
-                        self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.cond_image, 
-                            y_0=self.gt_image, mask=self.mask, sample_num=self.sample_num)
-                    else:
-                        self.output, self.visuals = self.netG.restoration(self.cond_image, sample_num=self.sample_num)
-                        
+                        if self.task in ['inpainting','uncropping']:
+                            self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.cond_image, 
+                                y_0=self.gt_image, mask=self.mask, sample_num=self.sample_num)
+                        else:
+                            self.output, self.visuals = self.netG.restoration(self.cond_image, sample_num=self.sample_num)
+                            
                 self.iter += self.batch_size
                 self.writer.set_iter(self.epoch, self.iter, phase='test')
                 for met in self.metrics:
@@ -223,8 +228,9 @@ class Palette(BaseModel):
                     value = met(self.gt_image, self.output)
                     self.test_metrics.update(key, value)
                     self.writer.add_scalar(key, value)
-                for key, value in self.get_current_visuals(phase='test').items():
-                    self.writer.add_images(key, value)
+                if self.iter % 2048 == 0:
+                    for key, value in self.get_current_visuals(phase='test').items():
+                        self.writer.add_figure(key,self.make_figures(value,single=True),close=True)
                 self.writer.save_images(self.save_current_results())
         
         test_log = self.test_metrics.result()
@@ -255,3 +261,34 @@ class Palette(BaseModel):
         if self.ema_scheduler is not None:
             self.save_network(network=self.netG_EMA, network_label=netG_label+'_ema')
         self.save_training_state()
+
+    def distill(self):
+        while self.epoch <= self.opt['train']['n_epoch'] and self.iter <= self.opt['train']['n_iter']:
+            self.epoch += 1
+            if self.opt['distributed']:
+                ''' sets the epoch for this sampler. When :attr:`shuffle=True`, this ensures all replicas use a different random ordering for each epoch '''
+                self.phase_loader.sampler.set_epoch(self.epoch) 
+
+            train_log = self.train_step()
+
+            ''' save logged informations into log dict ''' 
+            train_log.update({'epoch': self.epoch, 'iters': self.iter})
+
+            ''' print logged informations to the screen and tensorboard ''' 
+            for key, value in train_log.items():
+                self.logger.info('{:5s}: {}\t'.format(str(key), value))
+            
+            if self.epoch % self.opt['train']['save_checkpoint_epoch'] == 0:
+                self.logger.info('Saving the self at the end of epoch {:.0f}'.format(self.epoch))
+                self.save_everything()
+
+            if self.epoch % self.opt['train']['val_epoch'] == 0:
+                self.logger.info("\n\n\n------------------------------Validation Start------------------------------")
+                if self.val_loader is None:
+                    self.logger.warning('Validation stop where dataloader is None, Skip it.')
+                else:
+                    val_log = self.val_step()
+                    for key, value in val_log.items():
+                        self.logger.info('{:5s}: {}\t'.format(str(key), value))
+                self.logger.info("\n------------------------------Validation End------------------------------\n\n")
+        self.logger.info('Number of Epochs has reached the limit, End.')

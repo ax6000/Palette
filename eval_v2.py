@@ -6,6 +6,7 @@ import numpy as np
 import os 
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from tabulate import tabulate
 def calc_min_max(x):
     # x = (x.astype(np.float32)/127.5-1)
     return np.nanmin(x,axis=1),np.nanmax(x,axis=1)
@@ -31,30 +32,56 @@ if __name__ == '__main__':
     # p0n_dir = glob.glob("p*",root_dir=args.dst)
     n_patients = 0
     errors = []
+    gt = []
+    cond= []
+    out = []
     # for i in p0n_dir:
     gt_files = glob.glob(f"{args.dst}\GT_*.npy")
+    cond_files = glob.glob(f"{args.dst}\Process_*.npy")
     out_files = glob.glob(f"{args.dst}\OUT_*.npy")
     for j in tqdm(range(len(gt_files))):
         # output = np.load(os.path.join(file,args.dst))
-        gt = np.load(os.path.join(gt_files[j]))
+        gt.append(np.load(os.path.join(gt_files[j])))
         # plt.plot(gt[0,:])
         # plt.show()
-        out = np.load(os.path.join(out_files[j]))
+        cond.append(np.load(os.path.join(cond_files[j])))
+        out.append(np.load(os.path.join(out_files[j])))
         # print(gt.shape,out.shape,gt.dtype)
         # calc min and max"
         if j % 50 == 0:
             # create_plots(gt,out)
             pass
-        gt_min,gt_max = calc_min_max(gt)
-        out_min,out_max = calc_min_max(out)
-        # print(out_max.shape,out_max[:10])
-        error = np.zeros((2,*out_min.shape))
-        # print(error.shape)
-        error[0,:]=gt_min-out_min
-        error[1,:]=gt_max-out_max
-        # print(error[0,:],error[1,:])
-        errors.append(error)
-    errors = np.concatenate(errors,axis=1)
+    print(gt[-1].shape)
+    gt = np.concatenate(gt,axis=0)
+    out = np.concatenate(out,axis=0)
+    cond = np.concatenate(cond,axis=0)
+    gt_mean = np.mean(gt.flatten())
+    out_mean = np.mean(out.flatten())
+    cond_mean = np.mean(cond.flatten())
+    gt_std = np.std(gt.mean(axis=1),dtype=np.float64)
+    out_std = np.std(out.mean(axis=1),dtype=np.float64)
+    cond_std = np.std(cond.mean(axis=1),dtype=np.float64)
+    print(np.count_nonzero(np.isnan(out)))
+    headers = ["Signal", "Mean","Std"]
+    table = [["data_ppg", 0.494153162946643,0.10694360087091538],
+            ]
+    table.append(["cond_ppg",cond_mean,cond_std])
+    table.append( ["data_abp",0.39593121533751857,0.13489903083932583])
+    table.append(["gt",gt_mean,gt_std])
+    table.append(["out",out_mean,out_std])
+    print(tabulate(table,headers, floatfmt=".4f"))
+    # print(gt_mean,gt_std,out_mean,out_std,cond_mean,cond_std)
+    # print(gt.shape,out.shape)
+    # out = (out-out_mean)/out_std*0.1349+0.396
+    out = (out-out_mean)/out_std*gt_std+gt_mean
+    gt_min,gt_max = calc_min_max(gt)
+    out_min,out_max = calc_min_max(out)
+    # print(out_max.shape,out_max[:10])
+    errors = np.zeros((2,*out_min.shape))
+    # print(error.shape)
+    errors[0,:]=gt_min-out_min
+    errors[1,:]=gt_max-out_max
+    # errors = np.concatenate(errors,axis=1)
     
     errors*=200
     errors = errors[:,~np.isnan(errors).any(axis=0)]

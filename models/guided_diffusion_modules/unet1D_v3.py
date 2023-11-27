@@ -280,6 +280,7 @@ class QKVAttentionLegacy(nn.Module):
             "bct,bcs->bts", q * scale, k * scale
         )  # More stable with f16 than dividing afterwards
         weight = torch.softmax(weight.float(), dim=-1).type(weight.dtype)
+        # weight = torch.softmax(weight.float(), dim=-1).type(weight.dtype)
         a = torch.einsum("bts,bcs->bct", weight, v)
         return a.reshape(bs, -1, length)
 
@@ -553,7 +554,7 @@ class UNet(nn.Module):
         return self.out(h)
 
 if __name__ == '__main__':
-    b, c, h, w = 4, 1, 64
+    b, c, h, = 64, 1, 256
     timsteps = 100
     model = UNet(
         image_size=h,
@@ -561,8 +562,9 @@ if __name__ == '__main__':
         inner_channel=64,
         out_channel=1,
         res_blocks=2,
-        attn_res=[8]
+        attn_res=[16]
     )
     x = torch.randn((b, c, h))
     emb = torch.ones((b, ))
     out = model(x, emb)
+    
