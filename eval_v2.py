@@ -23,7 +23,7 @@ def create_plots(x,y):
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    # parser.add_argument('-s', '--src', type=str, help='Ground truth images directory')
+    parser.add_argument('-s', '--src', type=str, help='Ground truth images directory')
     parser.add_argument('-d', '--dst', type=str, help='Generate images directory')
    
     ''' parser configs '''
@@ -35,6 +35,8 @@ if __name__ == '__main__':
     gt = []
     cond= []
     out = []
+    scales = np.load(args.src)
+    print("aaaa",scales.shape,scales[:10])
     # for i in p0n_dir:
     gt_files = glob.glob(f"{args.dst}\GT_*.npy")
     cond_files = glob.glob(f"{args.dst}\Process_*.npy")
@@ -52,8 +54,13 @@ if __name__ == '__main__':
             # create_plots(gt,out)
             pass
     print(gt[-1].shape)
-    gt = np.concatenate(gt,axis=0)
     out = np.concatenate(out,axis=0)
+    gt = np.concatenate(gt,axis=0)
+    scales = scales[:out.shape[0]]
+    gt[:] /= scales[:,1][:, None]
+    gt[:] -= scales[:,0][:, None]
+    out[:] /= scales[:,1][:, None]
+    out[:] -= scales[:,0][:, None]
     cond = np.concatenate(cond,axis=0)
     gt_mean = np.mean(gt.flatten())
     out_mean = np.mean(out.flatten())
@@ -73,7 +80,7 @@ if __name__ == '__main__':
     # print(gt_mean,gt_std,out_mean,out_std,cond_mean,cond_std)
     # print(gt.shape,out.shape)
     # out = (out-out_mean)/out_std*0.1349+0.396
-    out = (out-out_mean)/out_std*gt_std+gt_mean
+    # out = (out-out_mean)/out_std*gt_std+gt_mean
     gt_min,gt_max = calc_min_max(gt)
     out_min,out_max = calc_min_max(out)
     # print(out_max.shape,out_max[:10])
@@ -81,9 +88,13 @@ if __name__ == '__main__':
     # print(error.shape)
     errors[0,:]=gt_min-out_min
     errors[1,:]=gt_max-out_max
+    # errors[0,:]/= scales[:,1]
+    # errors[0,:]-= scales[:,0]
+    # errors[1,:]/= scales[:,1]
+    # errors[1,:]-= scales[:,0]
     # errors = np.concatenate(errors,axis=1)
     
-    errors*=200
+    # errors*=200
     errors = errors[:,~np.isnan(errors).any(axis=0)]
     print(np.count_nonzero(np.isnan(errors)))
     print("error shape:",errors.shape)

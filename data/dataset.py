@@ -17,7 +17,7 @@ def is_image_file(filename):
 
 def make_dataset(dir):
     if os.path.isfile(dir):
-        images = [i for i in np.genfromtxt(dir, dtype=str, encoding='utf-8')]
+        images = [i for i in np.genfromtxt(dir, dtype=str, encoding='utf-8', ndmin=1)]
     else:
         images = []
         assert os.path.isdir(dir), '%s is not a valid directory' % dir
@@ -242,7 +242,7 @@ class PPG2ABPDataset_v2(data.Dataset):
         self.data=self.load_npys()
         print(self.data.shape,len(self.data))
         if data_len > 0:
-            data_index = np.arange(0,len(self.data),max(len(self.data)//int(data_len),1)).astype(int)
+            data_index = np.arange(0,len(self.data),max(len(self.data)//int(data_len),1)).astype(int)[:int(data_len)]
             self.data = self.data[data_index]
             # self.data = self.data[:int(data_len)]
         else:
@@ -254,7 +254,7 @@ class PPG2ABPDataset_v2(data.Dataset):
             arr = np.load(self.data_root+"\\"+str(f))
             if len(arr) != 0:
                 data.append(arr)
-        data = np.concatenate(data,dtype=np.float16)
+        data = np.concatenate(data,dtype=np.float32)
         return data
     
     def __getitem__(self, index):
@@ -285,9 +285,9 @@ class PPG2ABPDataset_v4(data.Dataset):
         self.image_size = image_size
         self.data=self.load_npys()
         if data_len > 0:
-            # data_index = np.arange(0,len(self.data),max(len(self.data)//int(data_len),1)).astype(int)
-            # self.data = self.data[data_index]
-            self.data = self.data[:int(data_len)]
+            data_index = np.arange(0,len(self.data),max(len(self.data)//int(data_len),1)).astype(int)[:data_len]
+            self.data = self.data[data_index]
+            # self.data = self.data[:int(data_len)]
         else:
             pass
         print("data prepared:" ,self.data.shape)

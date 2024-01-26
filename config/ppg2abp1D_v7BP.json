@@ -1,5 +1,5 @@
 {
-    "name": "ppg2abp_1DBP_v2", // experiments name
+    "name": "ppg2abp_1DBP_v7", // experiments name
     "gpu_ids": [0], // gpu ids list, default is single 0
     "seed" : -1, // random seed, seed <0 represents randomization not used 
     "finetune_norm": false, // find the parameters to optimize
@@ -11,8 +11,8 @@
         "results": "results",
         "checkpoint": "checkpoint",
         // "resume_state": "experiments/inpainting_places2_220413_143231/checkpoint/25" 
-        // "resume_state": null // ex: 100, loading .state  and .pth from given epoch and iteration
-        "resume_state": "experiments/train_BP_complete_2/checkpoint/28"// ex: 100, loading .state  and .pth from given epoch and iteration
+        "resume_state": null // ex: 100, loading .state  and .pth from given epoch and iteration
+        // "resume_state": "experiments/train_ppg2abp_1DBP_v6_240123_191758/checkpoint/1"// ex: 100, loading .state  and .pth from given epoch and iteration
     },
 
     "datasets": { // train or test
@@ -20,26 +20,43 @@
             "which_dataset": {  // import designated dataset using arguments 
                 "name": ["data.dataset", "PPG2ABPDataset_v2"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
                 "args":{ // arguments to initialize dataset
-                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\BP_npy\\1219\\p00",
-                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\train_BP.txt",
+                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\BP_npy\\0122\\p00",
+                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\train_BP2.txt",
                     "data_len": -1
                 } 
             },
             "dataloader":{
-                "validation_split": 64, // percent or number 
+                "validation_split": 1.0, // percent or number 
                 "args":{ // arguments to initialize train_dataloader
-                    "batch_size": 8, // batch size in each gpu
+                    "batch_size": 32, // batch size in each gpu
                     "num_workers": 4,
                     "shuffle": true,
                     "pin_memory": true,
                     "drop_last": true
                 },
                 "val_args":{ // arguments to initialize valid_dataloader, will overwrite the parameters in train_dataloader
-                    "batch_size": 64, // batch size in each gpu
+                    "batch_size": 500, // batch size in each gpu
                     "num_workers": 4,
-                    "shuffle": false,
+                    "shuffle": true,
                     "pin_memory": true,
                     "drop_last": false
+                }
+            }
+        },
+        "validate": { 
+            "which_dataset": {
+                "name": "PPG2ABPDataset_v2", // import Dataset() class / function(not recommend) from default file
+                "args":{
+                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\BP_npy\\0122\\p00",
+                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\val_BP2.txt",
+                    "data_len":5120
+                }
+            },
+            "dataloader":{
+                "args":{
+                    "batch_size": 256,
+                    "num_workers": 4,
+                    "pin_memory": true
                 }
             }
         },
@@ -47,14 +64,14 @@
             "which_dataset": {
                 "name": "PPG2ABPDataset_v2", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\BP_npy\\1219\\p00",
-                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\test_BP.txt",
-                    "data_len":5e5
+                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\BP_npy\\0122\\p00",
+                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\test_BP2.txt",
+                    "data_len":1e4
                 }
             },
             "dataloader":{
                 "args":{
-                    "batch_size": 256,
+                    "batch_size": 500,
                     "num_workers": 8,
                     "pin_memory": true
                 }
@@ -80,14 +97,14 @@
         }, 
         "which_networks": [ // import designated list of networks using arguments
             {
-                "name": ["models.network1D_v3", "Network"], // import Network() class / function(not recommend) from default file (default is [models/network.py]) 
+                "name": ["models.network1D_ddim_v5", "Network"], // import Network() class / function(not recommend) from default file (default is [models/network.py]) 
                 "args": { // arguments to initialize network
                     "init_type": "kaiming", // method can be [normal | xavier| xavier_uniform | kaiming | orthogonal], default is kaiming
                     "module_name": "guided_diffusion", // sr3 | guided_diffusion
                     "unet": {
                         "in_channel": 2,
                         "out_channel": 1,
-                        "inner_channel": 64,
+                        "inner_channel": 32,
                         "channel_mults": [
                             1,
                             2,
@@ -99,10 +116,10 @@
                             16
                             // 8
                         ],
-                        "num_head_channels": 32,
+                        "num_head_channels": 16,
                         "res_blocks": 2,
-                        "dropout": 0.2,
-                        "image_size": 512
+                        "dropout": 0.3,
+                        "image_size": 256
                     },
                     "beta_schedule": {
                         "train": {
@@ -114,9 +131,9 @@
                         },
                         "test": {
                             "schedule": "linear",
-                            "n_timestep": 200,
-                            "linear_start": 1e-5,
-                            "linear_end": 0.1
+                            "n_timestep": 2000,
+                            "linear_start": 1e-6,
+                            "linear_end": 0.01
                         }
                     }
                 }
@@ -143,6 +160,7 @@
         "val_epoch": 1,
         "save_checkpoint_epoch": 1,
         "log_iter": 10,
-        "debug_split": 10000 // percent or number, change the size of dataloder to debug_split.
+        "debug_split": 1000, // percent or number, change the size of dataloder to debug_split.
+        "debug_val_split": 10 // percent or number, change the size of dataloder to debug_split.
     }
 }

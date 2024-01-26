@@ -34,6 +34,9 @@ if __name__ == '__main__':
     # for i in p0n_dir:
     gt_files = glob.glob(f"{args.dst}\GT_*.npy")
     out_files = glob.glob(f"{args.dst}\OUT_*.npy")
+    limit = (0,481115//256)
+    gt_files = gt_files[limit[0]:limit[1]]
+    out_files = out_files[limit[0]:limit[1]]
     for j in tqdm(range(len(gt_files))):
         # output = np.load(os.path.join(file,args.dst))
         gt = np.load(os.path.join(gt_files[j]))
