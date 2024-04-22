@@ -12,7 +12,7 @@
         "checkpoint": "checkpoint",
         // "resume_state": "experiments/inpainting_places2_220413_143231/checkpoint/25" 
         // "resume_state": null // ex: 100, loading .state  and .pth from given epoch and iteration
-        "resume_state": "experiments/train_ppg2abp_1DBP_v8_240126_134254/checkpoint/20"// ex: 100, loading .state  and .pth from given epoch and iteration
+        "resume_state": "experiments/train_ppg2abp_1DBP_v8_240411_132353/checkpoint/218"// ex: 100, loading .state  and .pth from given epoch and iteration
     },
 
     "datasets": { // train or test
@@ -20,8 +20,8 @@
             "which_dataset": {  // import designated dataset using arguments 
                 "name": ["data.dataset", "PPG2ABPDataset_v2"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
                 "args":{ // arguments to initialize dataset
-                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\BP_npy\\0123_08_align_norm3_256\\p00",
-                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\train_BP2.txt",
+                    "data_root": "..\\..\\data\\processed\\BP_npy\\0325_256_3_corr_clean\\p00",
+                    "data_flist": "..\\..\\data\\processed\\list\\train_BP2.txt",
                     "data_len": -1
                 } 
             },
@@ -47,9 +47,9 @@
             "which_dataset": {
                 "name": "PPG2ABPDataset_v2", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\BP_npy\\0123_08_align_norm3_256\\p00",
-                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\val_BP2.txt",
-                    "data_len":5121
+                    "data_root": "..\\..\\data\\processed\\BP_npy\\0325_256_3_corr_clean\\p00",
+                    "data_flist": "..\\..\\data\\processed\\list\\val_BP2.txt",
+                    "data_len":1e4
                 }
             },
             "dataloader":{
@@ -64,8 +64,8 @@
             "which_dataset": {
                 "name": "PPG2ABPDataset_v2", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\BP_npy\\0123_08_align_norm3_256\\p00",
-                    "data_flist": "F:\\minowa\\BloodPressureEstimation\\data\\processed\\list\\test_BP2.txt",
+                    "data_root": "..\\..\\data\\processed\\BP_npy\\0325_256_3_corr_clean\\p00",
+                    "data_flist": "..\\..\\data\\processed\\list\\test_BP2.txt",
                     "data_len":-1
                 }
             },
@@ -118,7 +118,7 @@
                         ],
                         "num_head_channels": 32,
                         "res_blocks": 2,
-                        "dropout": 0.3,
+                        "dropout": 0.2,
                         "image_size": 512
                     },
                     "beta_schedule": {
@@ -148,8 +148,8 @@
     },
 
     "train": { // arguments for basic training
-        "n_epoch": 100, // max epochs, not limited now
-        "n_iter": 2e8, // max interations
+        "n_epoch": 1000, // max epochs, not limited now
+        "n_iter": 5e9, // max interations
         "val_epoch": 1, // valdation every specified number of epochs
         "save_checkpoint_epoch": 1,
         "log_iter": 1e4, // log every specified number of iterations

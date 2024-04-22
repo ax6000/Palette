@@ -8,21 +8,22 @@ import torch.nn.functional as F
 from .nn1D_v3 import (
     checkpoint,
     zero_module,
-    # normalization,
+    normalization,
     count_flops_attn,
     gamma_embedding
 )
-def normalization(channels):
-    """
-    Make a standard normalization layer.
+# def normalization(channels):
+#     """
+#     Make a standard normalization layer.
 
-    :param channels: number of input channels.
-    :return: an nn.Module for normalization.
-    """
-    return BNorm32(32, channels)
+#     :param channels: number of input channels.
+#     :return: an nn.Module for normalization.
+#     """
+#     return BNorm32(32, channels)
 class BNorm32(nn.BatchNorm1d):
     def forward(self, x):
         return super().forward(x.float()).type(x.dtype)
+    
 class SiLU(nn.Module):
     def forward(self, x):
         return x * torch.sigmoid(x)
@@ -60,13 +61,14 @@ class Upsample(nn.Module):
 
     """
 
-    def __init__(self, channels, use_conv, out_channel=None):
+    def __init__(self, channels, use_conv,kernel_size=3, out_channel=None):
         super().__init__()
         self.channels = channels
         self.out_channel = out_channel or channels
         self.use_conv = use_conv
+        self.kernel_size = kernel_size
         if use_conv:
-            self.conv = nn.Conv1d(self.channels, self.out_channel, 3, padding=1)
+            self.conv = nn.Conv1d(self.channels, self.out_channel, self.kernel_size, padding=1)
 
     def forward(self, x):
         assert x.shape[1] == self.channels
@@ -82,21 +84,23 @@ class Downsample(nn.Module):
     :param use_conv: a bool determining if a convolution is applied.
     """
 
-    def __init__(self, channels, use_conv, out_channel=None):
+    def __init__(self, channels, use_conv, kernel=3, out_channel=None):
         super().__init__()
         self.channels = channels
         self.out_channel = out_channel or channels
         self.use_conv = use_conv
+        self.kernel_size=kernel
         stride = 2
         if use_conv:
             self.op = nn.Conv1d(
-                self.channels, self.out_channel, 3, stride=stride, padding=1
+                self.channels, self.out_channel, self.kernel_size, stride=stride, padding=1
             )
         else:
             assert self.channels == self.out_channel
             self.op = nn.AvgPool1d(kernel_size=stride, stride=stride)
 
     def forward(self, x):
+        # print("downsample",x.shape[1] == self.channels,x.shape[1],self.channels,self.out_channel,self.use_conv)
         assert x.shape[1] == self.channels
         return self.op(x)
 
@@ -122,6 +126,7 @@ class ResBlock(EmbedBlock):
         emb_channels,
         dropout,
         out_channel=None,
+        kernel_size=3,
         use_conv=False,
         use_scale_shift_norm=False,
         use_checkpoint=False,
@@ -136,21 +141,21 @@ class ResBlock(EmbedBlock):
         self.use_conv = use_conv
         self.use_checkpoint = use_checkpoint
         self.use_scale_shift_norm = use_scale_shift_norm
-
+        self.kernel_size = kernel_size
         self.in_layers = nn.Sequential(
             normalization(channels),
             SiLU(),
-            nn.Conv1d(channels, self.out_channel, 3, padding=1),
+            nn.Conv1d(channels, self.out_channel, self.kernel_size, padding=1),
         )
 
         self.updown = up or down
 
         if up:
-            self.h_upd = Upsample(channels, False)
-            self.x_upd = Upsample(channels, False)
+            self.h_upd = Upsample(channels, False, self.kernel_size)
+            self.x_upd = Upsample(channels, False, self.kernel_size)
         elif down:
-            self.h_upd = Downsample(channels, False)
-            self.x_upd = Downsample(channels, False)
+            self.h_upd = Downsample(channels, False, self.kernel_size)
+            self.x_upd = Downsample(channels, False, self.kernel_size)
         else:
             self.h_upd = self.x_upd = nn.Identity()
 
@@ -166,7 +171,7 @@ class ResBlock(EmbedBlock):
             SiLU(),
             nn.Dropout(p=dropout),
             zero_module(
-                nn.Conv1d(self.out_channel, self.out_channel, 3, padding=1)
+                nn.Conv1d(self.out_channel, self.out_channel, self.kernel_size, padding=1)
             ),
         )
 
@@ -174,10 +179,10 @@ class ResBlock(EmbedBlock):
             self.skip_connection = nn.Identity()
         elif use_conv:
             self.skip_connection = nn.Conv1d(
-                channels, self.out_channel, 3, padding=1
+                channels, self.out_channel, self.kernel_size, padding=1
             )
         else:
-            self.skip_connection = nn.Conv1d(channels, self.out_channel, 1)
+            self.skip_connection = nn.Conv1d(channels, self.out_channel,1)
 
     def forward(self, x, emb):
         """
@@ -389,6 +394,7 @@ class UNet(nn.Module):
         self.in_channel = in_channel
         self.inner_channel = inner_channel
         self.out_channel = out_channel
+        self.kernel_size = 3
         self.res_blocks = res_blocks
         self.attn_res = attn_res
         self.dropout = dropout
@@ -409,7 +415,7 @@ class UNet(nn.Module):
 
         ch = input_ch = int(channel_mults[0] * inner_channel)
         self.input_blocks = nn.ModuleList(
-            [EmbedSequential(nn.Conv1d(in_channel, ch, 3, padding=1))]
+            [EmbedSequential(nn.Conv1d(in_channel, ch, self.kernel_size, padding=1))]
         )
         self._feature_size = ch
         input_block_chans = [ch]
@@ -422,6 +428,7 @@ class UNet(nn.Module):
                         cond_embed_dim,
                         dropout,
                         out_channel=int(mult * inner_channel),
+                        kernel_size=self.kernel_size,
                         use_checkpoint=use_checkpoint,
                         use_scale_shift_norm=use_scale_shift_norm,
                     )
@@ -449,6 +456,7 @@ class UNet(nn.Module):
                             cond_embed_dim,
                             dropout,
                             out_channel=out_ch,
+                            kernel_size=self.kernel_size,
                             use_checkpoint=use_checkpoint,
                             use_scale_shift_norm=use_scale_shift_norm,
                             down=True,
@@ -469,6 +477,7 @@ class UNet(nn.Module):
                 ch,
                 cond_embed_dim,
                 dropout,
+                kernel_size=self.kernel_size,
                 use_checkpoint=use_checkpoint,
                 use_scale_shift_norm=use_scale_shift_norm,
             ),
@@ -483,6 +492,7 @@ class UNet(nn.Module):
                 ch,
                 cond_embed_dim,
                 dropout,
+                kernel_size=self.kernel_size,
                 use_checkpoint=use_checkpoint,
                 use_scale_shift_norm=use_scale_shift_norm,
             ),
@@ -499,6 +509,7 @@ class UNet(nn.Module):
                         cond_embed_dim,
                         dropout,
                         out_channel=int(inner_channel * mult),
+                        kernel_size=self.kernel_size,
                         use_checkpoint=use_checkpoint,
                         use_scale_shift_norm=use_scale_shift_norm,
                     )
@@ -522,6 +533,7 @@ class UNet(nn.Module):
                             cond_embed_dim,
                             dropout,
                             out_channel=out_ch,
+                            kernel_size=self.kernel_size,
                             use_checkpoint=use_checkpoint,
                             use_scale_shift_norm=use_scale_shift_norm,
                             up=True,
@@ -536,7 +548,7 @@ class UNet(nn.Module):
         self.out = nn.Sequential(
             normalization(ch),
             SiLU(),
-            zero_module(nn.Conv1d(input_ch, out_channel, 3, padding=1)),
+            zero_module(nn.Conv1d(input_ch, out_channel, self.kernel_size, padding=1)),
         )
 
     def forward(self, x, gammas):

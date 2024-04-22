@@ -48,7 +48,7 @@ class Network(BaseNetwork):
         if module_name == 'sr3':
             from .sr3_modules.unet import UNet
         elif module_name == 'guided_diffusion':
-            from .guided_diffusion_modules.unet1D_v3 import UNet
+            from .guided_diffusion_modules.unet1D_v8 import UNet
         
         self.denoise_fn = UNet(**unet)
         self.beta_schedule = beta_schedule

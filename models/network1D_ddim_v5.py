@@ -233,10 +233,9 @@ class Network(BaseNetwork):
                                                     unconditional_guidance_scale=unconditional_guidance_scale,
                                                     unconditional_conditioning=unconditional_conditioning,
                                                     )
-        # return samples, intermediates
-        # print(237,samples.shape,intermediates.shape,torch.mean(samples))
         return samples, intermediates
-
+    
+    # ported from https://github.com/CompVis/latent-diffusion/blob/main/ldm/models/diffusion/ddim.py
     @torch.no_grad()
     def ddim_sampling(self, cond, shape,
                       x_T=None, ddim_use_original_steps=False,

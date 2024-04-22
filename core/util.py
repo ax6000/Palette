@@ -31,7 +31,7 @@ def tensor2img(tensor, out_type=np.uint8, min_max=(-1, 1)):
     return img_np.astype(out_type).squeeze()
 
 def postprocess(images):
-	return [tensor2img(image,out_type=np.float16) for image in images]
+	return [tensor2img(image,out_type=np.float32) for image in images]
 
 
 def set_seed(seed, gl_seed=0):

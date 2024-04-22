@@ -43,7 +43,7 @@ def main_worker(gpu, ngpus_per_node, opt):
         state_dir = opt['path']['resume_state'][:_index]
         print(epochs,state_dir)
     try:
-        for i in range(1,epochs):
+        for i in range(43,epochs):
             if epochs != 1:
                 opt['path']['resume_state'] = state_dir+str(i)
             networks = [define_network(phase_logger, opt, item_opt) for item_opt in opt['model']['which_networks']]

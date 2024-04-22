@@ -10,58 +10,51 @@ from tabulate import tabulate
 def calc_min_max(x):
     # x = (x.astype(np.float32)/127.5-1)
     return np.nanmin(x,axis=1),np.nanmax(x,axis=1)
-def create_plots(x,y):
-    n=4
-    x *= 200
-    y *= 200
-    fig,axes = plt.subplots(2,n,figsize=(10,5),tight_layout=True)
-    for i in range(n):
-        axes[0,i].plot(x[i,:])
-        axes[1,i].plot(y[i,:])
-    plt.show()
-    plt.close()
+
+# def create_plots(x,y):
+#     n=4
+#     x *= 200
+#     y *= 200
+#     fig,axes = plt.subplots(2,n,figsize=(10,5),tight_layout=True)
+#     for i in range(n):
+#         axes[0,i].plot(x[i,:])
+#         axes[1,i].plot(y[i,:])
+#     plt.show()
+#     plt.close()
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--src', type=str, help='Ground truth images directory')
-    parser.add_argument('-d', '--dst', type=str, help='Generate images directory')
+    # -s ..\..\data\processed\BP_npy\<dir name>\p00\scale_test.npy 
+    # -d .\experiments\<dir name>\results\test\<epoch no>
+    parser.add_argument('-s', '--src', type=str, help='Scale file(test) directory')
+    parser.add_argument('-d', '--dst', type=str, help='Generated images directory')
    
     ''' parser configs '''
     args = parser.parse_args()
-
-    # p0n_dir = glob.glob("p*",root_dir=args.dst)
     n_patients = 0
     errors = []
+    # load scale file
+    scales = np.load(args.src)
     gt = []
     cond= []
     out = []
-    scales = np.load(args.src)
-    print("aaaa",scales.shape,scales[:10])
-    # for i in p0n_dir:
     gt_files = glob.glob(f"{args.dst}\GT_*.npy")
     cond_files = glob.glob(f"{args.dst}\Process_*.npy")
     out_files = glob.glob(f"{args.dst}\OUT_*.npy")
     for j in tqdm(range(len(gt_files))):
-        # output = np.load(os.path.join(file,args.dst))
         gt.append(np.load(os.path.join(gt_files[j])))
-        # plt.plot(gt[0,:])
-        # plt.show()
         cond.append(np.load(os.path.join(cond_files[j])))
         out.append(np.load(os.path.join(out_files[j])))
-        # print(gt.shape,out.shape,gt.dtype)
-        # calc min and max"
-        if j % 50 == 0:
-            # create_plots(gt,out)
-            pass
     print(gt[-1].shape)
     out = np.concatenate(out,axis=0)
     gt = np.concatenate(gt,axis=0)
-    scales = scales[:out.shape[0]]
-    gt[:] /= scales[:,1][:, None]
-    gt[:] -= scales[:,0][:, None]
-    out[:] /= scales[:,1][:, None]
-    out[:] -= scales[:,0][:, None]
     cond = np.concatenate(cond,axis=0)
+    scales = scales[:out.shape[0]]
+    # 正規化を元に戻す
+    gt[:] -= scales[:,0][:, None]
+    gt[:] /= scales[:,1][:, None]
+    out[:] -= scales[:,0][:, None]
+    out[:] /= scales[:,1][:, None]
     gt_mean = np.mean(gt.flatten())
     out_mean = np.mean(out.flatten())
     cond_mean = np.mean(cond.flatten())
@@ -69,32 +62,22 @@ if __name__ == '__main__':
     out_std = np.std(out.mean(axis=1),dtype=np.float64)
     cond_std = np.std(cond.mean(axis=1),dtype=np.float64)
     print(np.count_nonzero(np.isnan(out)))
+    
     headers = ["Signal", "Mean","Std"]
-    table = [["data_ppg", 0.494153162946643,0.10694360087091538],
-            ]
+    table=[]
     table.append(["cond_ppg",cond_mean,cond_std])
-    table.append( ["data_abp",0.39593121533751857,0.13489903083932583])
+    # table.append(["data_ppg", 0.494153162946643,0.10694360087091538])
+    # table.append(["data_abp",0.39593121533751857,0.13489903083932583])
     table.append(["gt",gt_mean,gt_std])
     table.append(["out",out_mean,out_std])
     print(tabulate(table,headers, floatfmt=".4f"))
-    # print(gt_mean,gt_std,out_mean,out_std,cond_mean,cond_std)
-    # print(gt.shape,out.shape)
-    # out = (out-out_mean)/out_std*0.1349+0.396
-    # out = (out-out_mean)/out_std*gt_std+gt_mean
+    # 血圧の最大値(SBP)最小値(DBP)を計算
     gt_min,gt_max = calc_min_max(gt)
     out_min,out_max = calc_min_max(out)
-    # print(out_max.shape,out_max[:10])
+    # 誤差
     errors = np.zeros((2,*out_min.shape))
-    # print(error.shape)
     errors[0,:]=gt_min-out_min
     errors[1,:]=gt_max-out_max
-    # errors[0,:]/= scales[:,1]
-    # errors[0,:]-= scales[:,0]
-    # errors[1,:]/= scales[:,1]
-    # errors[1,:]-= scales[:,0]
-    # errors = np.concatenate(errors,axis=1)
-    
-    # errors*=200
     errors = errors[:,~np.isnan(errors).any(axis=0)]
     print(np.count_nonzero(np.isnan(errors)))
     print("error shape:",errors.shape)
@@ -106,17 +89,8 @@ if __name__ == '__main__':
     std = np.std(errors,axis=1)
     print(me.shape,mae.shape,rmse.shape,std.shape)
     error_5 = np.count_nonzero(np.abs(errors)<=5,axis=1)/n_samples*100
-    # print(n_samples,np.count_nonzero(np.abs(errors)<=5,axis=1),np.count_nonzero(errors<=10,axis=1),np.count_nonzero(errors<=15,axis=1))
-    error_10 = np.count_nonzero(np.abs(errors)<=10,axis=1)/n_samples*100
     error_15 = np.count_nonzero(np.abs(errors)<=15,axis=1)/n_samples*100
-    # print(me,mae,rmse,std)
-    # plt.subplot(2,1,1)
-    # plt.hist(errors[0],bins=30)
-    # plt.xlim(-60,60)
-    # plt.subplot(2,1,2)
-    # plt.hist(errors[1],bins=30)
-    # plt.xlim(-60,60)
-    # plt.show()
+    error_10 = np.count_nonzero(np.abs(errors)<=10,axis=1)/n_samples*100
     print("""
           test data samples:
           # samples : {}
@@ -129,9 +103,9 @@ if __name__ == '__main__':
           
           BHS standards range:
           Error   <5mmHg <10mmHg <15mmHg
-          gradeA     80%     90%     95%
-          gradeB     65%     85%     95%
-          gradeC     45%     75%     90%
+          gradeA     60%     85%     95%
+          gradeB     50%     75%     90%
+          gradeC     40%     65%     85%
           SBP     {:5.1f}%  {:5.1f}%  {:5.1f}%
           DBP     {:5.1f}%  {:5.1f}%  {:5.1f}%
            
@@ -145,3 +119,4 @@ if __name__ == '__main__':
             error_5[0], error_10[0], error_15[0],
             error_5[1], error_10[1], error_15[1],
           ))
+    # print(n_samples,np.count_nonzero(np.abs(errors)<=5,axis=1),np.count_nonzero(errors<=10,axis=1),np.count_nonzero(errors<=15,axis=1))

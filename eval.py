@@ -94,9 +94,9 @@ if __name__ == '__main__':
           
           BHS standards range:
           Error   <5mmHg <10mmHg <15mmHg
-          gradeA     80%     90%     95%
-          gradeB     65%     85%     95%
-          gradeC     45%     75%     90%
+          gradeA     60%     85%     95%
+          gradeB     50%     75%     90%
+          gradeC     40%     65%     85%
           SBP     {:5.1f}%  {:5.1f}%  {:5.1f}%
           DBP     {:5.1f}%  {:5.1f}%  {:5.1f}%
            

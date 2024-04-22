@@ -79,7 +79,7 @@ class Palette(BaseModel):
                  'gt_image': (self.gt_image.detach()[:].float().cpu()),
             'cond_image': (self.cond_image.detach()[:].float().cpu()),
                 'mask': self.mask.detach()[:].float().cpu(),
-                'mask_image': (self.mask_image+1)/2,
+                'mask_image': (self.mask_image),
             })
         # if phase != 'train':
         dict.update({
@@ -97,7 +97,7 @@ class Palette(BaseModel):
             ret_result.append(self.gt_image[idx].detach().float().cpu())
 
             ret_path.append('Process_{}'.format(self.path[idx]))
-            ret_result.append(self.visuals[idx::self.batch_size].detach().float().cpu())
+            ret_result.append(self.cond_image[idx::self.batch_size].detach().float().cpu())
             
             ret_path.append('Out_{}'.format(self.path[idx]))
             ret_result.append(self.output[idx-self.batch_size].detach().float().cpu())
@@ -143,7 +143,7 @@ class Palette(BaseModel):
             if self.ema_scheduler is not None:
                 if self.iter > self.ema_scheduler['ema_start'] and self.iter % self.ema_scheduler['ema_iter'] == 0:
                     self.EMA.update_model_average(self.netG_EMA, self.netG)
-
+            # if self.iter % 
         for scheduler in self.schedulers:
             scheduler.step()
         return self.train_metrics.result()
@@ -200,7 +200,7 @@ class Palette(BaseModel):
                     key = met.__name__
                     value = met(self.gt_image, self.output)
                     self.val_metrics.update(key, value)
-                    self.writer.add_scalar(key, value)
+                    # self.writer.add_scalar(key, value)
                 self.make_figures2()
                 # for key, value in self.get_current_visuals(phase='val').items():
                 #     if len(value.shape) == 3:
@@ -229,7 +229,6 @@ class Palette(BaseModel):
                         self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.cond_image, 
                             y_0=self.gt_image, mask=self.mask, sample_num=self.sample_num)
                     else:
-                        print("a")
                         # self.output, self.visuals = self.netG.restoration(self.cond_image, sample_num=self.sample_num)
                         self.output, self.visuals = self.netG.sample(S=200, batch_size=self.batch_size,shape=(1,256),conditioning=self.cond_image, sample_num=self.sample_num)
                         
