@@ -1,5 +1,5 @@
 {
-    "name": "ppg2abp_1DBP_v8", // experiments name
+    "name": "ppg2abp_2DBP_v10", // experiments name
     "gpu_ids": [0], // gpu ids list, default is single 0
     "seed" : -1, // random seed, seed <0 represents randomization not used 
     "finetune_norm": false, // find the parameters to optimize
@@ -18,24 +18,24 @@
     "datasets": { // train or test
         "train": { 
             "which_dataset": {  // import designated dataset using arguments 
-                "name": ["data.dataset", "PPG2ABPDataset_v2"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
+                "name": ["data.dataset", "PPG2ABPDataset_v3_Train"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
                 "args":{ // arguments to initialize dataset
                     "data_root": "..\\..\\data\\processed\\BP_npy\\0325_256_3_corr_clean\\p00",
                     "data_flist": "..\\..\\data\\processed\\list\\train_BP2.txt",
-                    "data_len": -1
+                    "data_len": 10000
                 } 
             },
             "dataloader":{
                 "validation_split": 1.0, // percent or number 
                 "args":{ // arguments to initialize train_dataloader
-                    "batch_size": 8, // batch size in each gpu
+                    "batch_size": 2, // batch size in each gpu
                     "num_workers": 4,
                     "shuffle": true,
                     "pin_memory": true,
                     "drop_last": true
                 },
                 "val_args":{ // arguments to initialize valid_dataloader, will overwrite the parameters in train_dataloader
-                    "batch_size": 256, // batch size in each gpu
+                    "batch_size": 8, // batch size in each gpu
                     "num_workers": 4,
                     "shuffle": true,
                     "pin_memory": true,
@@ -45,16 +45,16 @@
         },
         "validate": { 
             "which_dataset": {
-                "name": "PPG2ABPDataset_v2", // import Dataset() class / function(not recommend) from default file
+                "name": "PPG2ABPDataset_v3_Val", // import Dataset() class / function(not recommend) from default file
                 "args":{
                     "data_root": "..\\..\\data\\processed\\BP_npy\\0325_256_3_corr_clean\\p00",
                     "data_flist": "..\\..\\data\\processed\\list\\val_BP2.txt",
-                    "data_len":1e4
+                    "data_len":1000
                 }
             },
             "dataloader":{
                 "args":{
-                    "batch_size": 256,
+                    "batch_size": 8,
                     "num_workers": 8,
                     "pin_memory": true
                 }
@@ -62,16 +62,16 @@
         },
         "test": { 
             "which_dataset": {
-                "name": "PPG2ABPDataset_v2", // import Dataset() class / function(not recommend) from default file
+                "name": "PPG2ABPDataset_v3_Test", // import Dataset() class / function(not recommend) from default file
                 "args":{
                     "data_root": "..\\..\\data\\processed\\BP_npy\\0325_256_3_corr_clean\\p00",
                     "data_flist": "..\\..\\data\\processed\\list\\test_BP2.txt",
-                    "data_len":-1
+                    "data_len":2000
                 }
             },
             "dataloader":{
                 "args":{
-                    "batch_size": 500,
+                    "batch_size": 8,
                     "num_workers": 8,
                     "pin_memory": true
                 }
@@ -81,7 +81,7 @@
 
     "model": { // networks/metrics/losses/optimizers/lr_schedulers is a list and model is a dict
         "which_model": { // import designated  model(trainer) using arguments 
-            "name": ["models.model_v4", "Palette"], // import Model() class / function(not recommend) from models.model.py (default is [models.model.py])
+            "name": ["models.model_v5", "Palette"], // import Model() class / function(not recommend) from models.model.py (default is [models.model.py])
             "args": {
                 "sample_num": 8, // process of each image
                 "task": "i2i",
@@ -97,7 +97,7 @@
         }, 
         "which_networks": [ // import designated list of networks using arguments
             {
-                "name": ["models.network1D_ddim_v8", "Network"], // import Network() class / function(not recommend) from default file (default is [models/network.py]) 
+                "name": ["models.network_ddim_v10", "Network"], // import Network() class / function(not recommend) from default file (default is [models/network.py]) 
                 "args": { // arguments to initialize network
                     "init_type": "kaiming", // method can be [normal | xavier| xavier_uniform | kaiming | orthogonal], default is kaiming
                     "module_name": "guided_diffusion", // sr3 | guided_diffusion

@@ -51,7 +51,7 @@ def main_worker(gpu, ngpus_per_node, opt):
         logger = phase_logger,
         writer = phase_writer
     )
-    summary(model.netG.denoise_fn, [ (8,2, 256), (8,1)],depth=10)
+    # summary(model.netG.denoise_fn, [ (8,2, 256,), (8,1)],depth=10)
     phase_logger.info('Begin model {}.'.format(opt['phase']))
     try:
         if opt['phase'] == 'train':

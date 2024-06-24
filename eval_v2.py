@@ -95,7 +95,7 @@ if __name__ == '__main__':
           test data samples:
           # samples : {}
           
-          Eval Stats:   SBP    DBP
+          Eval Stats:   DBP    SBP
           MAE:        {:6.3f} {:6.3f}
           RMSE:       {:6.3f} {:6.3f}
           Mean Error: {:6.3f} {:6.3f}

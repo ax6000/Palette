@@ -314,3 +314,101 @@ class PPG2ABPDataset_v4(data.Dataset):
 
     def __len__(self):
         return self.data.shape[0]
+    
+    
+    
+
+IMG_EXTENSIONS = [
+    '.jpg', '.JPG', '.jpeg', '.JPEG',
+    '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP',
+]
+
+def is_image_file(filename):
+    return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
+
+def make_dataset(dir):
+    print(os.path.isfile(dir))
+    if os.path.isfile(dir):
+        arr = np.genfromtxt(dir, dtype=str, encoding='utf-8')
+        if arr.ndim:
+            images = [i for i in arr]
+        else:
+            images = np.array([arr])
+    else:
+        images = []
+        assert os.path.isdir(dir), '%s is not a valid directory' % dir
+        for root, _, fnames in sorted(os.walk(dir)):
+            for fname in sorted(fnames):
+                if is_image_file(fname):
+                    path = os.path.join(root, fname)
+                    images.append(path)
+
+    return images
+
+
+class PPG2ABPDataset_v3_base(data.Dataset):
+    def __init__(self,data_flist,data_root = r"F:\minowa\BloodPressureEstimation\data\processed\BP_npy\0325_256_corr_clean\p00",data_len=1000, image_size=[224,224], loader=None):
+        self.data_root = data_root
+        self.data_flist = data_flist
+        self.flist = make_dataset(self.data_flist)
+        # if data_len > 0:
+        #     self.flist = flist[:int(data_len)]
+        # else:
+        #     self.flist = flist
+        self.tfs = transforms.ToTensor()
+        self.size = image_size
+        self.data=self.load_npys()
+        if data_len >= len(self.data):
+            self.data = self.data[:len(self.data)-len(self.data)%64]
+        elif data_len > 0:
+            print(len(self.data),int(data_len))
+            data_index = np.arange(0,len(self.data),max(len(self.data)//int(data_len),0)).astype(int)[:int(data_len)]
+            self.data = self.data[data_index]
+        else:
+            self.data = self.data[:len(self.data)-len(self.data)%64]
+        print("data prepared:" ,self.data.shape)
+    # def _expand_dims(self,tensor):
+    #     length = tensor.shape[-1]
+    #     reshaped = torch.unsqueeze(tensor, axis=2)
+    #     reshaped = torch.repeat_interleave(reshaped, length, axis=2)
+    #     return reshaped
+    def load_npys(self):
+        data = []
+        for f in self.flist:
+            arr = np.load(self.data_root+"\\"+str(f))
+            if len(arr) != 0:
+                data.append(arr)
+        data = np.concatenate(data)
+        return data
+    
+    def __getitem__(self, index):
+        # ret = {}
+        # ret['gt_image'] = self._expand_dims(torch.from_numpy(self.data[index,:,0].astype(np.float32)))
+        # ret['cond_image'] = self._expand_dims(torch.from_numpy(self.data[index,:,1].astype(np.float32)))
+        ret = {}
+        
+        abp = self.data[index,:,1].astype(np.float32)
+        abp = np.tile(abp,(256,1))[np.newaxis]
+        ppg = self.data[index,:,1].astype(np.float32)
+        ppg = np.tile(ppg,(256,1))[np.newaxis]
+        # ret['path'] = str(index)
+        ret['gt_image'] = abp
+        ret['cond_image'] = ppg
+        ret['path'] = str(index)
+        return ret
+
+    def __len__(self):
+        return self.data.shape[0]
+    
+class PPG2ABPDataset_v3_Train(PPG2ABPDataset_v3_base):
+    def __init__(self, data_len=-1, size=224, data_root=None,loader=None,data_flist=None):
+        super().__init__(data_root=data_root,data_flist = r"F:\minowa\BloodPressureEstimation\data\processed\list\train_BP2.txt",data_len=data_len,image_size=size)
+
+class PPG2ABPDataset_v3_Val(PPG2ABPDataset_v3_base):
+    def __init__(self, data_len=-1, size=224, data_root=None ,loader=None,data_flist=None):
+        super().__init__(data_root=data_root,data_flist = r"F:\minowa\BloodPressureEstimation\data\processed\list\val_BP2.txt",data_len=data_len,image_size=size)
+
+class PPG2ABPDataset_v3_Test(PPG2ABPDataset_v3_base):
+    def __init__(self, data_len=-1, size=224, data_root=None, loader=None,data_flist=None):
+        super().__init__(data_root=data_root,data_flist = r"F:\minowa\BloodPressureEstimation\data\processed\list\test_BP2.txt",data_len=data_len,image_size=size)         
+    
