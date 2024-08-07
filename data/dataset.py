@@ -247,7 +247,8 @@ class PPG2ABPDataset_v2(data.Dataset):
             # self.data = self.data[:int(data_len)]
         else:
             self.data = self.data[:len(self.data)-len(self.data)%64]
-        print("data prepared:" ,self.data.shape)
+        self.in_channel = 1 if len(self.data.shape) == 3 else self.data.shape[-1]
+        print("data prepared:" ,self.data.shape,"channel:",self.in_channel)
     def load_npys(self):
         data = []
         for f in self.flist:
@@ -264,8 +265,12 @@ class PPG2ABPDataset_v2(data.Dataset):
         # npy = np.load('{}\\{}'.format(self.data_root, file_name))
         # cond_image = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, 'cond', file_name)))
 
-        ret['gt_image'] = self.data[index,:,0].reshape(1,-1).astype(np.float32)
-        ret['cond_image'] = self.data[index,:,1].reshape(1,-1).astype(np.float32)
+        if self.in_channel == 1:
+            ret['gt_image'] = self.data[index,:,0]
+        else:
+            ret['gt_image'] = self.data[index,:,0,0]
+        ret['gt_image'] = ret['gt_image'].reshape(1,-1).astype(np.float32) #
+        ret['cond_image'] = self.data[index,:,1].reshape(self.in_channel,-1).astype(np.float32)
         ret['path'] = str(index)
         return ret
 
@@ -277,10 +282,7 @@ class PPG2ABPDataset_v4(data.Dataset):
     def __init__(self, data_root, data_flist, data_len=-1, image_size=[224, 224], loader=None):
         self.data_root = data_root
         self.flist = make_dataset(data_flist)
-        # if data_len > 0:
-        #     self.flist = flist[:int(data_len)]
-        # else:
-        #     self.flist = flist
+
         self.tfs = transforms.ToTensor()
         self.image_size = image_size
         self.data=self.load_npys()
@@ -394,6 +396,7 @@ class PPG2ABPDataset_v3_base(data.Dataset):
         # ret['path'] = str(index)
         ret['gt_image'] = abp
         ret['cond_image'] = ppg
+
         ret['path'] = str(index)
         return ret
 

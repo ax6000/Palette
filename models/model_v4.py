@@ -170,9 +170,28 @@ class Palette(BaseModel):
         plt.plot(gt)
         plt.plot(out,color='orange')
         fig_ppg = plt.figure()
-        plt.plot(cond)
+        plt.plot(cond.transpose(1,0).detach().cpu().numpy())
         self.writer.add_figure('abp',fig_abp,close=True)
         self.writer.add_figure('ppg',fig_ppg,close=True)
+    def make_figures_intermediates(self):
+        # intermediates = {'x_inter': [img], 'pred_x0': [img]}
+        # self.visuals['x_inter'] = self.visuals['x_inter']
+        num = len(self.visuals['pred_x0'])
+        print("intermediates:",num,self.visuals['pred_x0'][0].shape)
+        cols=10
+        i = 10
+        gt = self.gt_image[i].squeeze().detach().cpu().numpy()
+        rows = len(self.visuals['pred_x0'])//cols+1
+        fig, axes = plt.subplots(rows,cols,figsize=(cols*4,rows*4))
+        for y in range(rows):
+            for x in range(cols):
+                if y*cols+x >= num:
+                    break
+                axes[y,x].plot(gt,alpha=0.8,c="orange")
+                axes[y,x].plot(self.visuals['pred_x0'][y*cols+x][i].squeeze().detach().cpu().numpy(),c="cornflowerblue")
+                axes[y,x].axis("off")
+        self.writer.add_figure('abp_samples',fig,close=True)
+
     def val_step(self):
         self.netG.eval()
         self.val_metrics.reset()
@@ -202,6 +221,7 @@ class Palette(BaseModel):
                     self.val_metrics.update(key, value)
                     # self.writer.add_scalar(key, value)
                 self.make_figures2()
+                self.make_figures_intermediates()
                 # for key, value in self.get_current_visuals(phase='val').items():
                 #     if len(value.shape) == 3:
                 #         self.writer.add_figure(key,self.make_figures(value),close=True)
@@ -239,8 +259,9 @@ class Palette(BaseModel):
                     value = met(self.gt_image, self.output)
                     self.test_metrics.update(key, value)
                     self.writer.add_scalar(key, value)
-                if self.iter % 2048 == 0:
+                if self.iter % 2000 == 0:
                     self.make_figures2()
+                    self.make_figures_intermediates()
                     # for key, value in self.get_current_visuals(phase='test').items():
                     #     self.writer.add_figure(key,self.make_figures(value,single=True),close=True)
                 self.writer.save_images(self.save_current_results())

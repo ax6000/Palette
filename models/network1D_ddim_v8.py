@@ -197,7 +197,7 @@ class Network(BaseNetwork):
                corrector_kwargs=None,
                verbose=True,
                x_T=None,
-               log_every_t=100,
+               log_every_t=5,
                unconditional_guidance_scale=1.,
                unconditional_conditioning=None,
                # this has to come in the same format as the conditioning, # e.g. as encoded tokens, ...
@@ -232,6 +232,7 @@ class Network(BaseNetwork):
                                                     log_every_t=log_every_t,
                                                     unconditional_guidance_scale=unconditional_guidance_scale,
                                                     unconditional_conditioning=unconditional_conditioning,
+                                                    timesteps=S
                                                     )
         # return samples, intermediates
         # print(237,samples.shape,intermediates.shape,torch.mean(samples))
@@ -241,7 +242,7 @@ class Network(BaseNetwork):
     def ddim_sampling(self, cond, shape,
                       x_T=None, ddim_use_original_steps=False,
                       callback=None, timesteps=None, quantize_denoised=False,
-                      mask=None, x0=None, img_callback=None, log_every_t=100,
+                      mask=None, x0=None, img_callback=None, log_every_t=5,
                       temperature=1., noise_dropout=0., score_corrector=None, corrector_kwargs=None,
                       unconditional_guidance_scale=1., unconditional_conditioning=None, sample_num=10,):
         assert self.num_timesteps > sample_num, 'num_timesteps must greater than sample_num'
@@ -286,7 +287,7 @@ class Network(BaseNetwork):
                 intermediates['pred_x0'].append(pred_x0)
             if i % sample_inter == 0:
                 ret_arr = torch.cat([ret_arr, pred_x0], dim=0)
-        return img, ret_arr
+        return img, intermediates
 
     @torch.no_grad()
     def p_sample_ddim(self, x, c, t, index, repeat_noise=False, use_original_steps=False, quantize_denoised=False,
