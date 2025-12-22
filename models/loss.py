@@ -16,6 +16,18 @@ def mse_loss(output, target):
     # return F.mse_loss(output.view(-1,1), target.view(-1,1))
     return F.mse_loss(output, target)
 
+class p2wLoss(nn.Module):
+    def __init__(self, p2_k=1., p2_gamma=0.5):
+        super(p2wLoss, self).__init__()
+        self.p2_k = p2_k
+        self.p2_gamma = p2_gamma
+
+    def set_snr(self,snr):
+        self.snr = snr
+    def forward(self, output, target):
+        weight  = (1 / (self.p2_k + self.snr)**self.p2_gamma).gather(0,target.data.view(-1))
+        loss = mean_flat(weight * (target - output) ** 2)
+        return loss 
     
 class FocalLoss(nn.Module):
     def __init__(self, gamma=2, alpha=None, size_average=True):
@@ -48,3 +60,9 @@ class FocalLoss(nn.Module):
         if self.size_average: return loss.mean()
         else: return loss.sum()
 
+
+def mean_flat(tensor):
+    """
+    Take the mean over all non-batch dimensions.
+    """
+    return tensor.mean(dim=list(range(1, len(tensor.shape))))

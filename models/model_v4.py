@@ -170,19 +170,22 @@ class Palette(BaseModel):
         plt.plot(gt)
         plt.plot(out,color='orange')
         fig_ppg = plt.figure()
-        plt.plot(cond.transpose(1,0).detach().cpu().numpy())
+        # plt.plot(cond.transpose(1,0).detach().cpu().numpy())
         self.writer.add_figure('abp',fig_abp,close=True)
         self.writer.add_figure('ppg',fig_ppg,close=True)
     def make_figures_intermediates(self):
         # intermediates = {'x_inter': [img], 'pred_x0': [img]}
         # self.visuals['x_inter'] = self.visuals['x_inter']
+        # print("intermediates:",len(self.visuals['pred_x0']))
+        # print(self.visuals['pred_x0'][0].shape)
         num = len(self.visuals['pred_x0'])
-        print("intermediates:",num,self.visuals['pred_x0'][0].shape)
         cols=10
-        i = 10
+        i = 0
+        print(num)
         gt = self.gt_image[i].squeeze().detach().cpu().numpy()
-        rows = len(self.visuals['pred_x0'])//cols+1
+        rows = max(len(self.visuals['pred_x0'])//cols+1,2)
         fig, axes = plt.subplots(rows,cols,figsize=(cols*4,rows*4))
+        print(rows,cols,axes.shape)
         for y in range(rows):
             for x in range(cols):
                 if y*cols+x >= num:
@@ -211,10 +214,10 @@ class Palette(BaseModel):
                             y_0=self.gt_image, mask=self.mask, sample_num=self.sample_num)
                     else:
                         self.output, self.visuals = self.netG.sample(S=100, batch_size=self.batch_size,shape=(1,256),conditioning=self.cond_image, sample_num=self.sample_num)
-                
+                print(self.visuals.keys())
                 self.iter += self.batch_size
                 self.writer.set_iter(self.epoch, self.iter, phase='val')
-
+                # print("218:gt shape",self.gt_image.shape,"output shape:",self.output.shape)
                 for met in self.metrics:
                     key = met.__name__
                     value = met(self.gt_image, self.output)
